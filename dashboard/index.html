@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAF Admin Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .status-bar {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.active {
+            background: #10b981;
+        }
+        
+        .status-indicator.warning {
+            background: #f59e0b;
+        }
+        
+        .status-indicator.danger {
+            background: #ef4444;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card h2 {
+            font-size: 1.25rem;
+            margin-bottom: 15px;
+            color: #4b5563;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .threat-log {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .threat-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #f9fafb;
+            border-left: 3px solid #ef4444;
+            border-radius: 5px;
+        }
+        
+        .threat-item.low {
+            border-left-color: #10b981;
+        }
+        
+        .threat-item.medium {
+            border-left-color: #f59e0b;
+        }
+        
+        .threat-item.high {
+            border-left-color: #ef4444;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #5a67d8;
+        }
+        
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .mode-option {
+            padding: 8px 16px;
+            background: #f3f4f6;
+            border: 2px solid #e5e7eb;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .mode-option.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .chart-container {
+            height: 200px;
+            margin-top: 20px;
+        }
+        
+        .plugin-list {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .plugin-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f9fafb;
+            border-radius: 5px;
+        }
+        
+        .toggle {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: #cbd5e1;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .toggle.active {
+            background: #10b981;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        
+        .toggle.active .toggle-slider {
+            transform: translateX(26px);
+        }
+        
+        #ws-status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ef4444;
+            margin-left: 10px;
+        }
+        
+        #ws-status.connected {
+            background: #10b981;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛡️ WAF Admin Dashboard</h1>
+            <div class="status-bar">
+                <div class="status-item">
+                    <div class="status-indicator active"></div>
+                    <span>WAF Status: <strong id="waf-status">Active</strong></span>
+                </div>
+                <div class="status-item">
+                    <span>Mode: <strong id="waf-mode">Monitor</strong></span>
+                </div>
+                <div class="status-item">
+                    <span>WebSocket: <span id="ws-status"></span></span>
+                </div>
+            </div>
+        </header>
+        
+        <div class="dashboard">
+            <!-- Statistics Card -->
+            <div class="card">
+                <h2>📊 Statistics</h2>
+                <div class="metric">
+                    <span>Total Requests</span>
+                    <span class="metric-value" id="total-requests">0</span>
+                </div>
+                <div class="metric">
+                    <span>Blocked Requests</span>
+                    <span class="metric-value" id="blocked-requests">0</span>
+                </div>
+                <div class="metric">
+                    <span>Threat Score</span>
+                    <span class="metric-value" id="threat-score">0</span>
+                </div>
+                <div class="metric">
+                    <span>Active Connections</span>
+                    <span class="metric-value" id="active-connections">0</span>
+                </div>
+            </div>
+            
+            <!-- Mode Control Card -->
+            <div class="card">
+                <h2>⚙️ Mode Control</h2>
+                <div class="mode-selector">
+                    <div class="mode-option active" data-mode="monitor">Monitor</div>
+                    <div class="mode-option" data-mode="block">Block</div>
+                    <div class="mode-option" data-mode="learning">Learning</div>
+                </div>
+                <div class="controls">
+                    <button id="reload-plugins">Reload Plugins</button>
+                    <button id="clear-cache">Clear Cache</button>
+                </div>
+            </div>
+            
+            <!-- Plugins Card -->
+            <div class="card">
+                <h2>🔌 Active Plugins</h2>
+                <div class="plugin-list" id="plugin-list">
+                    <!-- Plugins will be populated here -->
+                </div>
+            </div>
+            
+            <!-- AI Status Card -->
+            <div class="card">
+                <h2>🤖 AI Anomaly Detection</h2>
+                <div class="metric">
+                    <span>Model Type</span>
+                    <span id="ai-model">Autoencoder</span>
+                </div>
+                <div class="metric">
+                    <span>Accuracy</span>
+                    <span class="metric-value" id="ai-accuracy">95%</span>
+                </div>
+                <div class="metric">
+                    <span>Training Data</span>
+                    <span class="metric-value" id="ai-training">0</span>
+                </div>
+                <div class="controls">
+                    <button id="train-model">Train Model</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Threat Log -->
+        <div class="card">
+            <h2>🚨 Recent Threats</h2>
+            <div class="threat-log" id="threat-log">
+                <!-- Threats will be populated here -->
+            </div>
+        </div>
+        
+        <!-- Rate Limit Status -->
+        <div class="card">
+            <h2>⏱️ Rate Limiting</h2>
+            <div class="chart-container" id="rate-chart">
+                <!-- Chart will be rendered here -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const Dashboard = {
+            ws: null,
+            config: {
+                wsEndpoint: 'ws://localhost:8080/waf-monitor',
+                apiKey: null
+            },
+            
+            init() {
+                this.connectWebSocket();
+                this.setupEventListeners();
+                this.loadInitialData();
+                this.startPolling();
+            },
+            
+            connectWebSocket() {
+                const url = new URL(this.config.wsEndpoint);
+                if (this.config.apiKey) {
+                    url.searchParams.set('apiKey', this.config.apiKey);
+                }
+                
+                this.ws = new WebSocket(url);
+                
+                this.ws.onopen = () => {
+                    document.getElementById('ws-status').classList.add('connected');
+                    
+                    // Subscribe to channels
+                    this.ws.send(JSON.stringify({
+                        type: 'subscribe',
+                        data: { channels: ['threats', 'stats', 'alerts'] }
+                    }));
+                    
+                    // Request initial stats
+                    this.ws.send(JSON.stringify({ type: 'get-stats' }));
+                };
+                
+                this.ws.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    this.handleMessage(message);
+                };
+                
+                this.ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    document.getElementById('ws-status').classList.remove('connected');
+                };
+                
+                this.ws.onclose = () => {
+                    document.getElementById('ws-status').classList.remove('connected');
+                    // Reconnect after 5 seconds
+                    setTimeout(() => this.connectWebSocket(), 5000);
+                };
+            },
+            
+            handleMessage(message) {
+                switch (message.type) {
+                    case 'threat':
+                        this.addThreat(message.data);
+                        break;
+                    case 'stats':
+                    case 'stats-update':
+                        this.updateStats(message.data);
+                        break;
+                    case 'alert':
+                        this.showAlert(message.data);
+                        break;
+                    case 'welcome':
+                        console.log('Connected to WAF Monitor');
+                        break;
+                }
+            },
+            
+            addThreat(threat) {
+                const log = document.getElementById('threat-log');
+                const item = document.createElement('div');
+                
+                const severity = threat.severity > 7 ? 'high' : threat.severity > 4 ? 'medium' : 'low';
+                item.className = `threat-item ${severity}`;
+                
+                item.innerHTML = `
+                    <div><strong>${threat.type || 'Unknown'}</strong> - ${new Date(threat.timestamp).toLocaleTimeString()}</div>
+                    <div>IP: ${threat.ip || 'N/A'} | Path: ${threat.path || 'N/A'}</div>
+                    <div>Severity: ${threat.severity}/10</div>
+                `;
+                
+                log.insertBefore(item, log.firstChild);
+                
+                // Keep only last 50 threats
+                while (log.children.length > 50) {
+                    log.removeChild(log.lastChild);
+                }
+                
+                // Update blocked count
+                const blockedEl = document.getElementById('blocked-requests');
+                blockedEl.textContent = parseInt(blockedEl.textContent) + 1;
+            },
+            
+            updateStats(stats) {
+                if (stats.waf) {
+                    document.getElementById('total-requests').textContent = stats.waf.totalRequests || 0;
+                    document.getElementById('blocked-requests').textContent = stats.waf.blockedRequests || 0;
+                    
+                    // Update plugins
+                    if (stats.waf.plugins) {
+                        this.updatePlugins(stats.waf.plugins);
+                    }
+                }
+                
+                if (stats.activeClients !== undefined) {
+                    document.getElementById('active-connections').textContent = stats.activeClients;
+                }
+            },
+            
+            updatePlugins(plugins) {
+                const list = document.getElementById('plugin-list');
+                list.innerHTML = '';
+                
+                plugins.forEach(plugin => {
+                    const item = document.createElement('div');
+                    item.className = 'plugin-item';
+                    item.innerHTML = `
+                        <span>${plugin}</span>
+                        <div class="toggle active" data-plugin="${plugin}">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+            },
+            
+            setupEventListeners() {
+                // Mode selector
+                document.querySelectorAll('.mode-option').forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        document.querySelectorAll('.mode-option').forEach(o => o.classList.remove('active'));
+                        e.target.classList.add('active');
+                        
+                        const mode = e.target.dataset.mode;
+                        this.updateMode(mode);
+                    });
+                });
+                
+                // Buttons
+                document.getElementById('reload-plugins').addEventListener('click', () => {
+                    this.reloadPlugins();
+                });
+                
+                document.getElementById('clear-cache').addEventListener('click', () => {
+                    this.clearCache();
+                });
+                
+                document.getElementById('train-model').addEventListener('click', () => {
+                    this.trainModel();
+                });
+            },
+            
+            updateMode(mode) {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({
+                        type: 'update-config',
+                        data: { mode }
+                    }));
+                }
+                document.getElementById('waf-mode').textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+            },
+            
+            reloadPlugins() {
+                console.log('Reloading plugins...');
+                // Send reload command
+            },
+            
+            clearCache() {
+                console.log('Clearing cache...');
+                // Send clear cache command
+            },
+            
+            trainModel() {
+                console.log('Training AI model...');
+                // Send train command
+            },
+            
+            loadInitialData() {
+                // Load initial data via HTTP if needed
+            },
+            
+            startPolling() {
+                // Poll for stats every 5 seconds
+                setInterval(() => {
+                    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                        this.ws.send(JSON.stringify({ type: 'get-stats' }));
+                    }
+                }, 5000);
+            },
+            
+            showAlert(alert) {
+                console.log('Alert:', alert);
+                // Show alert notification
+            }
+        };
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            Dashboard.init();
+        });
+    </script>
+</body>
+</html>

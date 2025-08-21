@@ -1,0 +1,72 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly scan
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: |
+        npm ci
+        npm install -g snyk @microsoft/eslint-plugin-sdl eslint-plugin-security njsscan
+    
+    - name: Run npm audit
+      run: |
+        npm audit --json > npm-audit-report.json || true
+        npm audit
+      continue-on-error: true
+    
+    - name: Run Snyk Security Scan
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high --json-file-output=snyk-report.json
+      continue-on-error: true
+    
+    - name: Run ESLint Security Plugin
+      run: |
+        npx eslint . --plugin security --format json -o eslint-security-report.json || true
+        npx eslint . --plugin security
+      continue-on-error: true
+    
+    - name: Run njsscan
+      run: |
+        njsscan --json -o njsscan-report.json . || true
+        njsscan .
+      continue-on-error: true
+    
+    - name: Run Semgrep
+      uses: returntocorp/semgrep-action@v1
+      with:
+        config: auto
+      continue-on-error: true
+    
+    - name: Upload Security Reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          npm-audit-report.json
+          snyk-report.json
+          eslint-security-report.json
+          njsscan-report.json
+    
+    - name: Run CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      continue-on-error: true

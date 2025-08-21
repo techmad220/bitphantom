@@ -21,7 +21,10 @@
     "demo": "node examples/demo.js",
     "dashboard": "open http://localhost:3001/waf-admin",
     "security": "npm audit --audit-level=moderate",
-    "build": "echo 'No build step'"
+    "build": "echo 'No build step'",
+    "security:audit": "npm audit --audit-level=moderate",
+    "security:scan": "npm run security:audit && npx snyk test",
+    "security:fix": "npm audit fix"
   },
   "keywords": [
     "waf",
